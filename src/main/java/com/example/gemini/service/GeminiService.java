@@ -4,7 +4,6 @@ import com.example.gemini.model.GeminiModel;
 import com.example.gemini.repository.GeminiRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -17,57 +16,65 @@ import java.util.Map;
 import java.util.Optional;
 
 @Service
-@RequiredArgsConstructor
 public class GeminiService {
 
     private final GeminiRepository geminiRepository;
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final RestTemplate restTemplate;
+    private final ObjectMapper objectMapper;
 
     @Value("${gemini.api.key}")
-    private String geminiApiKey;
+    private String apiKey;
 
     @Value("${gemini.api.url}")
-    private String geminiApiUrl;
+    private String apiUrl;
+
+    public GeminiService(GeminiRepository geminiRepository) {
+        this.geminiRepository = geminiRepository;
+        this.restTemplate = new RestTemplate();
+        this.objectMapper = new ObjectMapper();
+    }
 
     public GeminiModel saveResponse(GeminiModel geminiModel) {
         String requestContent = geminiModel.getRequest();
 
-        // Construct the request payload for Gemini API
-        Map<String, Object> requestBody = Map.of(
-                "contents", List.of(
-                        Map.of(
-                                "parts", List.of(
-                                        Map.of("text", requestContent)))));
-
-        // Call Gemini API
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-
-        HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(requestBody, headers);
-
         try {
-            String response = restTemplate.postForObject(
-                    geminiApiUrl + geminiApiKey,
-                    requestEntity,
-                    String.class);
+            // Build request payload for OpenRouter API
+            Map<String, Object> requestBody = Map.of(
+                    "model", "google/gemini-2.0-flash-001",
+                    "messages", List.of(
+                            Map.of("role", "user", "content", requestContent)));
 
-            // Extract the text from the response
-            ObjectMapper objectMapper = new ObjectMapper();
-            JsonNode rootNode = objectMapper.readTree(response);
-            String extractedResponse = rootNode.path("candidates")
+            // Set headers for OpenRouter
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.set("Authorization", "Bearer " + apiKey);
+            headers.set("HTTP-Referer", "http://localhost:8080");
+            headers.set("X-Title", "Gemini App");
+
+            HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(requestBody, headers);
+
+            // Call OpenRouter API
+            String apiResponse = restTemplate.postForObject(apiUrl, requestEntity, String.class);
+
+            // Parse response to extract generated text
+            JsonNode rootNode = objectMapper.readTree(apiResponse);
+            String generatedText = rootNode
+                    .path("choices")
                     .get(0)
+                    .path("message")
                     .path("content")
-                    .path("parts")
-                    .get(0)
-                    .path("text")
                     .asText();
 
-            geminiModel.setResponse(extractedResponse);
+            geminiModel.setResponse(generatedText);
+
         } catch (Exception e) {
-            geminiModel.setResponse("Error processing Gemini response: " + e.getMessage());
+            geminiModel.setResponse("Error: " + e.getMessage());
         }
 
-        return geminiRepository.save(geminiModel);
+        // ALWAYS save to MongoDB
+        GeminiModel saved = geminiRepository.save(geminiModel);
+        System.out.println("Saved to MongoDB: id=" + saved.getId() + ", request=" + saved.getRequest());
+        return saved;
     }
 
     public List<GeminiModel> getAllResponses() {

@@ -2,7 +2,6 @@ package com.example.gemini.controller;
 
 import com.example.gemini.model.GeminiModel;
 import com.example.gemini.service.GeminiService;
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -10,11 +9,14 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/gemini")
-@RequiredArgsConstructor
-@CrossOrigin(origins = "*") // Allow all origins for simplicity, tighten in production
+@CrossOrigin(origins = "*")
 public class GeminiController {
 
     private final GeminiService geminiService;
+
+    public GeminiController(GeminiService geminiService) {
+        this.geminiService = geminiService;
+    }
 
     @PostMapping
     public ResponseEntity<GeminiModel> createResponse(@RequestBody GeminiModel geminiModel) {

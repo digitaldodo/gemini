@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gemini AI Chat</title>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --bg-dark: #0f0f23;
+            --bg-card: #1a1a2e;
+            --text: #e2e8f0;
+            --text-muted: #94a3b8;
+            --border: #334155;
+            --success: #22c55e;
+            --danger: #ef4444;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, var(--bg-dark) 0%, #1e1e3f 100%);
+            min-height: 100vh;
+            color: var(--text);
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 2.5rem;
+            margin-bottom: 2rem;
+            background: linear-gradient(135deg, var(--primary) 0%, #a855f7 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .card {
+            background: var(--bg-card);
+            border-radius: 16px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            border: 1px solid var(--border);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .card h2 {
+            font-size: 1.25rem;
+            margin-bottom: 1.5rem;
+            color: var(--primary);
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: var(--text-muted);
+        }
+
+        textarea {
+            width: 100%;
+            padding: 1rem;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text);
+            font-size: 1rem;
+            resize: vertical;
+            min-height: 100px;
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+        }
+
+        .btn {
+            padding: 0.875rem 2rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+            padding: 0.5rem 1rem;
+            font-size: 0.875rem;
+        }
+
+        .response-list {
+            display: grid;
+            gap: 1rem;
+        }
+
+        .response-item {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .response-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+        }
+
+        .response-item .request {
+            font-weight: 600;
+            color: var(--primary);
+            margin-bottom: 0.75rem;
+            font-size: 1.1rem;
+        }
+
+        .response-item .response {
+            color: var(--text-muted);
+            line-height: 1.6;
+            margin-bottom: 1rem;
+            white-space: pre-wrap;
+        }
+
+        .response-item .actions {
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        .message {
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            display: none;
+        }
+
+        .message.success {
+            background: rgba(34, 197, 94, 0.1);
+            border: 1px solid var(--success);
+            color: var(--success);
+            display: block;
+        }
+
+        .message.error {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid var(--danger);
+            color: var(--danger);
+            display: block;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: var(--text-muted);
+        }
+
+        .loader {
+            display: none;
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .loader.active {
+            display: block;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid var(--border);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        .loading-text {
+            margin-top: 1rem;
+            color: var(--text-muted);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>🤖 Gemini AI Chat</h1>
+
+        <div class="card">
+            <h2>💬 Ask Gemini</h2>
+            <div id="message" class="message"></div>
+            <form id="responseForm">
+                <div class="form-group">
+                    <label for="request">Your Question</label>
+                    <textarea id="request" placeholder="Ask anything to Gemini AI..." required></textarea>
+                </div>
+                <button type="submit" id="submitBtn" class="btn btn-primary">
+                    <span id="btnText">Send to Gemini</span>
+                </button>
+            </form>
+        </div>
+
+        <div class="card">
+            <h2>📋 Conversation History</h2>
+            <div id="loader" class="loader">
+                <div class="spinner"></div>
+                <div class="loading-text">Loading...</div>
+            </div>
+            <div id="responseList" class="response-list"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = '/api/gemini';
+        const messageEl = document.getElementById('message');
+        const loaderEl = document.getElementById('loader');
+        const responseListEl = document.getElementById('responseList');
+        const form = document.getElementById('responseForm');
+        const submitBtn = document.getElementById('submitBtn');
+        const btnText = document.getElementById('btnText');
+
+        function showMessage(text, type) {
+            messageEl.textContent = text;
+            messageEl.className = `message ${type}`;
+            setTimeout(() => { messageEl.className = 'message'; }, 4000);
+        }
+
+        async function loadResponses() {
+            loaderEl.classList.add('active');
+            try {
+                const response = await fetch(API_URL);
+                const data = await response.json();
+                renderResponses(data);
+            } catch (error) {
+                console.error('Error loading responses:', error);
+            } finally {
+                loaderEl.classList.remove('active');
+            }
+        }
+
+        function renderResponses(responses) {
+            if (responses.length === 0) {
+                responseListEl.innerHTML = '<div class="empty-state">No conversations yet. Ask Gemini something!</div>';
+                return;
+            }
+
+            responseListEl.innerHTML = responses.reverse().map(item => `
+                <div class="response-item">
+                    <div class="request">📝 ${escapeHtml(item.request || 'No request')}</div>
+                    <div class="response">🤖 ${escapeHtml(item.response || 'No response')}</div>
+                    <div class="actions">
+                        <button class="btn btn-danger" onclick="deleteResponse('${item.id}')">Delete</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const requestText = document.getElementById('request').value.trim();
+            if (!requestText) {
+                showMessage('Please enter a question.', 'error');
+                return;
+            }
+
+            submitBtn.disabled = true;
+            btnText.textContent = 'Waiting for Gemini...';
+
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ request: requestText })
+                });
+
+                if (response.ok) {
+                    showMessage('Response received and saved!', 'success');
+                    form.reset();
+                    loadResponses();
+                } else {
+                    showMessage('Failed to get response.', 'error');
+                }
+            } catch (error) {
+                showMessage('Error: ' + error.message, 'error');
+            } finally {
+                submitBtn.disabled = false;
+                btnText.textContent = 'Send to Gemini';
+            }
+        });
+
+        async function deleteResponse(id) {
+            if (!confirm('Delete this conversation?')) return;
+
+            try {
+                const response = await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
+                if (response.ok) {
+                    showMessage('Deleted successfully!', 'success');
+                    loadResponses();
+                } else {
+                    showMessage('Failed to delete.', 'error');
+                }
+            } catch (error) {
+                showMessage('Error: ' + error.message, 'error');
+            }
+        }
+
+        loadResponses();
+    </script>
+</body>
+
+</html>
